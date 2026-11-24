@@ -1,10 +1,10 @@
-"""홈 화면 아이콘 만들기: 붉은 바탕에 🏯 (192, 512, 마스크용 512)  →  python make_icons.py"""
+"""홈 화면 아이콘 만들기: 남색 바탕에 🏯 (192, 512, 마스크용 512)  →  python make_icons.py"""
 import os
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FONT = r'C:\Windows\Fonts\seguiemj.ttf'
-BG = (178, 58, 72, 255)   # 오사카 붉은색
+BG = (31, 63, 110, 255)   # 쪽빛 남색 #1f3f6e
 
 
 def make(size, name, scale):
