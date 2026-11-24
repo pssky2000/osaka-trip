@@ -99,6 +99,15 @@ header.top .title{font-size:calc(17px*var(--fs));line-height:1.25}
 @media(min-width:720px){.flights{grid-template-columns:1fr 1fr}}
 .flight{border-radius:var(--r);padding:14px 16px;background:linear-gradient(135deg,#00695c,#26a69a);color:#fff}   /* 가는 날: 청록 (오사카 2026-11-25 사용자 고름) */
 .call-guide .cg-name{display:block;font-size:calc(22px*var(--fs));margin:2px 0 10px}
+.wmap{height:min(70vw,340px);border-radius:12px;overflow:hidden;margin-top:8px;background:var(--line)}
+.w-pin{width:30px;height:30px;border-radius:50%;background:#8a4b2a;color:#fff;font:800 15px/30px sans-serif;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.w-pin.hotel{background:#1f3f6e;font-size:15px}
+.w-row{display:flex;gap:10px;border-top:1px solid var(--line);padding:10px 0;margin-top:8px}
+.w-no{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#8a4b2a;color:#fff;font-weight:800;text-align:center;line-height:28px}
+.w-area{display:flex;flex-wrap:wrap;gap:4px}
+.w-ok{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.w-ok .btn{padding-left:0;padding-right:0}
+.card .w-ok .btn.on{background:#8a4b2a;color:#fff;border-color:#8a4b2a}
 .call-big{text-decoration:none}
 .card .btn.call-kakao,.btn.call-kakao{display:block;width:100%;margin-top:8px;display:flex!important;justify-content:center;align-items:center;font-size:calc(19px*var(--fs));background:#fee500!important;color:#191600!important;border:0;font-weight:800}
 .call-p.me{border:1.5px solid var(--line);background:transparent;cursor:default}
@@ -887,7 +896,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-5';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-8';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
@@ -1005,6 +1014,14 @@ var TYPES = {
   meal: ['🍽️', '식사'], bar: ['🍺', '술집'], massage: ['♨️', '온천'], shop: ['🛍️', '쇼핑'], etc: ['⭐', '기타'], golf: ['⛳', '골프']
 };
 function icon(t) { return (TYPES[t] || TYPES.etc)[0]; }
+/* 관광 일정은 이름을 보고 그림을 고름 (오사카 2026-11-25 사용자: 모두 🏯라 구분이 안 됨) */
+var TOUR_ICONS = [[/케이블카|로프웨이/, '🚡'], [/유람선|크루즈|배/, '🛶'], [/주조|사케|양조/, '🍶'], [/사슴|공원/, '🦌'],
+  [/도톤보리|신사이바시|거리|자카|번화가|시장/, '🏮'], [/하버|항구|모자이크|메리켄|바다/, '⚓'], [/오사카성|천수각|성$/, '🏯'],
+  [/도다이지|동대사|기요미즈|청수사|사찰|신사|데라|절$/, '⛩️'], [/전망|테라스|타워/, '🌄'], [/온천/, '♨️']];
+function itemIcon(it) {
+  if (it && it.type === 'tour') { var t = (it.title || '') + ' ' + (it.display || ''); for (var k = 0; k < TOUR_ICONS.length; k++) if (TOUR_ICONS[k][0].test(t)) return TOUR_ICONS[k][1]; }
+  return icon(it && it.type);
+}
 /* 여러 핀 지도(추천용): Leaflet을 처음 쓸 때만 불러옴 */
 var AUTO_TITLES = ['식사', '아침', '점심', '저녁', '조식', ''].concat(Object.keys(TYPES).map(function (k) { return TYPES[k][1]; }));
 /* 구글 지도(추천용): 키가 있을 때만, 처음 쓸 때 불러옴 */
@@ -1217,7 +1234,7 @@ function defaultTab() {
   var n = localNow(), ds = dates();
   if (n.date >= ds[0] && n.date <= ds[ds.length - 1]) return n.date;   // 여행 중에는 오늘 일정
   var t = LS.get('trip_tab', 'all');
-  return (t === 'all' || t === 'call' || (t === 'score' && golfOn()) || t === 'info' || (t === 'money' && canMoney()) || ds.indexOf(t) >= 0) ? t : 'all';
+  return (t === 'all' || t === 'call' || (t === 'whisky' && S.me && (S.me.isAdmin || (S.D && S.D.whiskyOk))) || (t === 'score' && golfOn()) || t === 'info' || (t === 'money' && canMoney()) || ds.indexOf(t) >= 0) ? t : 'all';
 }
 function dayLabel(date) {
   var its = itemsOf(date);
@@ -1805,14 +1822,15 @@ function render() {
   var SECS = [
     { k: 'all', i: '🏠', t: '요약' },
     { k: 'day', i: '📅', t: '일정' },
-    { k: 'call', i: '<svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" style="display:block;margin:0 auto"><rect x="1" y="1" width="22" height="22" rx="6" fill="#2fb257"/><path fill="#fff" d="M8.6 5.6c.4-.4 1-.4 1.4 0l1.6 1.9c.3.4.3 1-.1 1.4l-1 1c.7 1.5 1.9 2.7 3.4 3.4l1-1c.4-.4 1-.4 1.4-.1l1.9 1.6c.4.4.4 1 0 1.4l-1 1.1c-.7.7-1.8 1-2.8.6-3.2-1.2-5.8-3.8-7-7-.4-1 0-2.1.6-2.8z"/></svg>', t: '연락처' },   // 삼성 폰 📞 그림은 회색이라 초록 전화 그림 (2026-11-25)
+    { k: 'call', i: '<svg viewBox="0 0 24 24" width="1.2em" height="1.2em" aria-hidden="true" style="display:block;margin:-.1em auto"><rect x="0.5" y="0.5" width="23" height="23" rx="6" fill="#2fb257"/><path fill="#fff" d="M8.6 5.6c.4-.4 1-.4 1.4 0l1.6 1.9c.3.4.3 1-.1 1.4l-1 1c.7 1.5 1.9 2.7 3.4 3.4l1-1c.4-.4 1-.4 1.4-.1l1.9 1.6c.4.4.4 1 0 1.4l-1 1.1c-.7.7-1.8 1-2.8.6-3.2-1.2-5.8-3.8-7-7-.4-1 0-2.1.6-2.8z"/></svg>', t: '연락처' },   // 삼성 폰 📞 그림은 회색이라 초록 전화 그림 (2026-11-25)
     golfOn() ? { k: 'score', i: '⛳', t: '스코어' } : null,
     canMoney() ? { k: 'money', i: '💰', t: '경비' } : null,
+    (S.me.isAdmin || S.D.whiskyOk) ? { k: 'whisky', i: '🥃', t: '위스키' } : null,   // 회장 + 허락한 회원 (2026-11-25)
     { k: 'info', i: 'ℹ️', t: '정보' }
   ];
   SECS = SECS.filter(Boolean);
   if (sec === 'money' && !canMoney()) { S.tab = 'all'; sec = 'all'; }
-  var secTitle = { call: '연락처', all: '여행 요약', score: '골프 스코어', money: '회비 · 경비 · 정산', info: '여행 정보' }[sec];
+  var secTitle = { whisky: '🥃 위스키 지도', call: '연락처', all: '여행 요약', score: '골프 스코어', money: '회비 · 경비 · 정산', info: '여행 정보' }[sec];
 
   $app.innerHTML =
     '<div class="wrap">' +
@@ -1889,6 +1907,7 @@ function renderMain() {
   if (S.tab === 'all') h = viewAll();
   else if (S.tab === 'score') h = viewScore();
   else if (S.tab === 'call') h = viewCall();
+  else if (S.tab === 'whisky') h = (S.me.isAdmin || S.D.whiskyOk) ? viewWhisky() : viewAll();
   else if (S.tab === 'info') h = viewInfo();
   else if (S.tab === 'money') h = canMoney() ? viewMoney().replace(/(\d)원/g, '$1 원').replace(/¥(?=[\d−-])/g, '¥ ').replace(/(\d)만원/g, '$1 만원') : viewAll();   // 경비 화면 금액은 숫자와 '원' 사이 한 칸 (사용자 2026-11-22, 엔화도 '¥ 60,500'처럼 한 칸(줄이 바뀌어도 안 떨어지는 빈칸), '1080만원'처럼 줄인 금액은 그대로)
   else h = viewDay(S.tab);
@@ -2207,7 +2226,7 @@ function viewAll() {
   dates().forEach(function (d) {
     var its = itemsOf(d).filter(function (i) { return i.fixed || i.type === 'golf' || i.type === 'flight' || i.type === 'hotel'; });
     html += '<div class="card daycard" data-go="' + d + '" style="cursor:pointer"><div class="row between"><b class="dhead">' + md(d) + ' (' + wd(d) + ') · ' + esc(dayLabel(d)) + '</b><span class="muted small">자세히 ›</span></div>' +
-      its.map(function (i) { return '<div class="row small" style="margin-top:6px"><b style="width:46px">' + esc(i.time) + '</b><span>' + icon(i.type) + ' ' + esc(i.title) + (nameOf(i) ? ' · ' + esc(nameOf(i)) : '') + '</span></div>'; }).join('') +
+      its.map(function (i) { return '<div class="row small" style="margin-top:6px"><b style="width:46px">' + esc(i.time) + '</b><span>' + itemIcon(i) + ' ' + esc(i.title) + (nameOf(i) ? ' · ' + esc(nameOf(i)) : '') + '</span></div>'; }).join('') +
       '</div>';
   });
   return html + photosCard() + (early ? '' : pk) + (wTop ? '' : wc);   // 사진 모아 보기: 날짜별 일정 아래·여행 마무리 위 (2026-11-21 사용자 요청)
@@ -2307,7 +2326,7 @@ function nextCard(date) {
   // 비행기: 공항엔 출발 2시간 전까지 → 그 시각이 지나면 빨강 / 골프: 30분 이하면 빨강
   var by = fl ? fromMin(toMin(nx.time) - 120) : '';
   var soon = fl ? left <= 120 : left <= 30;
-  return '<div class="next' + (fl ? ' fl' : '') + (soon ? ' soon' : '') + '"><div class="nx-i">' + icon(nx.type) + '</div><div class="nx-b"><div class="nx-l">⏰ ' + (fl ? '비행기 출발까지' : '티오프까지') + '</div>' +
+  return '<div class="next' + (fl ? ' fl' : '') + (soon ? ' soon' : '') + '"><div class="nx-i">' + itemIcon(nx) + '</div><div class="nx-b"><div class="nx-l">⏰ ' + (fl ? '비행기 출발까지' : '티오프까지') + '</div>' +
     bigLine(nx, fl) +
     (fl ? '<div class="nx-air">🛄 공항엔 <b>' + by + '</b>까지</div>' : '') + '</div>' +
     '<div class="nx-left">' + lt + '<span>남음</span></div></div>';
@@ -2414,7 +2433,7 @@ function itemHtml(it, letter) {
     '<div class="tm">' + esc(it.time || '--:--') + (it.fixed ? '<div class="lock">🔒 고정</div>' : '') + '</div>' +
     '<div class="bar"></div>' +
     '<div class="body" data-open="' + esc(it.id) + '">' +
-      '<div class="ttl">' + icon(it.type) + ' ' + esc(it.title) + '</div>' +
+      '<div class="ttl">' + itemIcon(it) + ' ' + esc(it.title) + '</div>' +
       (nameOf(it) ? '<div class="plc">📍 ' + esc(nameOf(it)) + '</div>' : '') +
       (it.memo ? (altMemo(it) ? '<div class="memo alt"><span class="ghostpin">📍 </span>' + esc(altParts(it).name) + '</div>' : '<div class="memo">' + esc(memoClean(it.memo)) + '</div>') : '') +
       '<div class="row" style="gap:6px;margin-top:2px">' + (changed ? '<span class="chg">✏️ 변경됨</span>' : '') + (cmts ? '<span class="chip">💬 ' + cmts + '</span>' : '') + '</div>' +
@@ -2507,14 +2526,14 @@ function shareRow(key, sub, verb) {
   return '<div class="share-row"><button class="share-c" data-share="' + esc(key) + '">' + KAKAO_SVG + '<span><b>카톡으로 ' + (verb || '보내기') + '</b><small>' + esc(sub || '') + '</small></span></button></div>';
 }
 function dayMd(d) { return md(d) + '(' + wd(d) + ')'; }   // 카톡 글용 '12/16(수)' — 예전엔 이름이 dayLabel과 겹쳐 날짜 탭 이름(⛳ 골프장·출발)을 덮어썼음 (2026-11-21 고침)
-function itemLine(it) { return (it.time ? it.time + ' ' : '') + icon(it.type) + ' ' + it.title + (nameOf(it) ? ' · ' + nameOf(it) : ''); }
+function itemLine(it) { return (it.time ? it.time + ' ' : '') + itemIcon(it) + ' ' + it.title + (nameOf(it) ? ' · ' + nameOf(it) : ''); }
 function shareDayText(date) {
   var r = S.D.rounds.filter(function (x) { return x.date === date; })[0];
   return '📅 ' + dayMd(date) + ' 일정' + (r ? ' — ⛳ ' + r.course : '') + '\n' + itemsOf(date).map(itemLine).join('\n');
 }
 function shareItemText(id) {
   var it = S.D.items.filter(function (x) { return x.id === id; })[0]; if (!it) return '';
-  return '📢 일정 안내\n' + dayMd(it.date) + ' ' + (it.time || '') + ' ' + icon(it.type) + ' ' + it.title +
+  return '📢 일정 안내\n' + dayMd(it.date) + ' ' + (it.time || '') + ' ' + itemIcon(it) + ' ' + it.title +
     (nameOf(it) ? '\n📍 ' + nameOf(it) : '') + (it.memo ? '\n📝 ' + memoClean(it.memo) : '') + (hasLL(it) ? '\n🗺️ ' + gmapOpen(it) : '');
 }
 function shareSettleText() {
@@ -2662,7 +2681,7 @@ function openItem(id) {
       (S.me.isAdmin && !isRO() ? '<div class="fbox" style="margin:6px 0 10px"><div class="fbt">🔎 장소 찾기</div>' +
         '<div class="row"><input class="inp" id="iq" placeholder="예) 가게 이름이나 주소"><button class="btn sm pri" id="ifind" style="flex:none;white-space:nowrap">찾기</button></div>' +
         '<button type="button" class="btn" id="ihere" style="width:100%;margin-top:6px">📡 지금 있는 곳으로 찾기</button>' +
-        ({ meal: 1, massage: 1, bar: 1 }[it.type] ? '<button type="button" class="btn" id="ireco" style="width:100%;margin-top:6px">' + icon(it.type) + ' 근처 추천 보기</button>' : '') +
+        ({ meal: 1, massage: 1, bar: 1 }[it.type] ? '<button type="button" class="btn" id="ireco" style="width:100%;margin-top:6px">' + itemIcon(it) + ' 근처 추천 보기</button>' : '') +
         '<div id="ires"></div></div>' : '');
   // 이 일정에서 적은 지출 (경비를 볼 수 있는 사람만)
   var exs = canMoney() ? (S.D.expenses || []).filter(function (e) { return e.item_id === id; }) : [];
@@ -2678,7 +2697,7 @@ function openItem(id) {
     // [✏️ 수정]은 날짜 줄 오른쪽 → 제목이 화면 폭을 다 씀 (2026-11-21 사용자: 제목 한 줄로). 그래도 길면 글씨를 줄여 한 줄에 (fitTitle)
     '<div class="row between" style="align-items:center;gap:8px"><span class="muted small">' + md(it.date) + '(' + wd(it.date) + ')</span>' +
       (S.me.isAdmin ? '<button class="btn sm" id="iedit" style="flex:none">✏️ 수정</button>' : '<button class="btn sm" id="ireq" style="flex:none">✋ 수정 요청</button>') + '</div>' +
-    '<div class="it-head"><h3 class="it-title">' + icon(it.type) + ' ' + esc(it.time) + ' ' + esc(it.title) + (it.fixed ? ' 🔒' : '') + '</h3></div>' +
+    '<div class="it-head"><h3 class="it-title">' + itemIcon(it) + ' ' + esc(it.time) + ' ' + esc(it.title) + (it.fixed ? ' 🔒' : '') + '</h3></div>' +
     (nameOf(it) ? '<div class="pl-blk"><span class="pin">📍</span><div><b>' + esc(nameOf(it)) + '</b>' + placeSub(it) +
       (altMemo(it) ? '<div style="margin-top:8px"><b>' + esc(altParts(it).name) + '</b>' + (altParts(it).addr ? '<br><span class="small muted">' + esc(altParts(it).addr) + '</span>' : '') + '</div>' : '') + '</div></div>' : '') +
     (it.memo && !altMemo(it) ? '<p class="small">' + esc(memoClean(it.memo)) + '</p>' : '') + links + routeCard(it) +
@@ -4059,6 +4078,84 @@ function viewCall() {
   });
   return out;
 }
+/* ═════════ 🥃 내 위스키 지도 (회장만, 2026-11-25 사용자 요청) ═════════
+ * 시트 '내장소'(서버가 회장에게만 보냄). 처음 열면 서버가 기본 가게 10곳을 넣고 구글 장소 검색으로 좌표를 채움 */
+var W_AREAS = ['신사이바시', '도톤보리', '난바', '우메다'];
+function myPlaces() { return (S.D.myPlaces || []).filter(function (p) { return p.name; }); }
+function viewWhisky() {
+  var ps = myPlaces(), need = !ps.length || ps.some(function (p) { return p.lat === '' || p.lat === undefined; });
+  if (need && !S.wFillBusy && S.me.isAdmin) {
+    S.wFillBusy = true;
+    call('myPlacesFill', {}).then(function (r) { S.D.myPlaces = r.myPlaces; saveCache(); if (S.tab === 'whisky') renderMain(); if (r.miss && r.miss.length) toast('위치를 못 찾은 가게: ' + r.miss.join(', ')); })
+      .catch(function (e) { toast(e.message); }).then(function () { S.wFillBusy = false; });
+  }
+  var area = S.wArea || '전체', list = ps.filter(function (p) { return area === '전체' || p.area === area; });
+  var areas = ['전체'].concat(W_AREAS.filter(function (a) { return ps.some(function (p) { return p.area === a; }); }));
+  setTimeout(drawWhiskyMap, 0);
+  var adm = S.me.isAdmin, okN = S.D.members.filter(function (m) { return m.whisky_ok; }).length;
+  return '<div class="card"><div class="small muted">' + (adm ? (okN ? '회장님과 허락한 ' + okN + '명만 보여요. (정보 › 관리자에서 바꿈)' : '회장님만 보이는 화면이에요. 다른 회원 폰에는 이 메뉴가 없어요.') : '회장님이 보여 준 위스키 가게 지도예요.') + '</div>' +
+      '<div class="seg-tabs w-area" style="margin-top:8px">' + areas.map(function (a) { return '<button class="' + (a === area ? 'on' : '') + '" data-warea="' + esc(a) + '">' + esc(a) + '</button>'; }).join('') + '</div>' +
+      '<div id="wmap" class="wmap">' + (need ? '<div class="small muted" style="padding:20px;text-align:center">가게 위치를 찾는 중…</div>' : '') + '</div>' +
+      '<a class="btn sm" style="margin-top:8px" target="_blank" href="https://www.google.com/maps/search/whisky+liquor+store/@' + S.D.settings.hotel_lat + ',' + S.D.settings.hotel_lng + ',15z">🔎 구글지도에서 근처 술가게 더 찾기</a></div>' +
+    '<div class="card"><b>🥃 가게 ' + list.length + '곳</b>' + list.map(function (p) {
+      var n = ps.indexOf(p) + 1, has = p.lat !== '' && p.lat !== undefined;
+      return '<div class="w-row"><span class="w-no">' + n + '</span><div style="flex:1;min-width:0"><b>' + esc(p.name) + '</b>' +
+        '<div class="small muted">' + esc([p.area, p.memo].filter(Boolean).join(' · ')) + '</div>' +
+        '<div class="row wrap-row" style="margin-top:6px">' +
+          (has ? '<a class="btn sm pri" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng + '&travelmode=walking">🚶 길찾기</a>' : '') +
+          '<a class="btn sm" target="_blank" href="' + esc(p.gurl || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.query || p.name))) + '">🗺️ 가게 정보</a>' +
+          (adm ? '<button class="btn sm ghost" data-wdel="' + esc(p.id) + '">🗑️</button>' : '') + '</div></div></div>';
+    }).join('') + '</div>' + (!adm ? '' :
+    '<div class="card"><b>＋ 가게 더 넣기</b><p class="small muted" style="margin:4px 0">가게 이름이나, 구글지도에서 [공유 → 링크 복사]한 주소를 붙여 넣으세요.</p>' +
+      '<div class="row" style="flex-wrap:nowrap"><input class="inp" id="w-q" placeholder="예) 리커마운틴 난바" style="flex:1;min-width:0"><button class="btn pri" id="w-add" style="flex-shrink:0">넣기</button></div></div>');
+}
+var wMapObj = null;
+function drawWhiskyMap() {
+  var box = el('#wmap'); if (!box) return;
+  var area = S.wArea || '전체', all = myPlaces(), ps = all.filter(function (p) { return p.lat !== '' && p.lat !== undefined && (area === '전체' || p.area === area); });
+  if (!ps.length) return;
+  var hotel = { lat: Number(S.D.settings.hotel_lat), lng: Number(S.D.settings.hotel_lng) };
+  var draw = function (L) {
+    box.innerHTML = '';
+    var m = L.map(box, { zoomControl: true, attributionControl: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
+    var b = [];
+    ps.forEach(function (p) {
+      var n = all.indexOf(p) + 1, ll = [Number(p.lat), Number(p.lng)]; b.push(ll);
+      L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="w-pin">' + n + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(m).bindPopup('<b>' + esc(p.name) + '</b>');
+    });
+    if (isFinite(hotel.lat)) L.marker([hotel.lat, hotel.lng], { icon: L.divIcon({ className: '', html: '<div class="w-pin hotel">🏨</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(m).bindPopup('숙소');
+    if (b.length === 1) m.setView(b[0], 16); else m.fitBounds(b, { padding: [24, 24] });
+    wMapObj = m;
+  };
+  var fail = function (e) { box.innerHTML = '<div class="small muted" style="padding:16px">' + esc(e.message) + '</div>'; };
+  var leaf = function () { loadLeaflet().then(draw).catch(fail); };
+  if (!S.D.mapsKey) return leaf();
+  loadGmaps(S.D.mapsKey).then(function (g) {   // 실제 앱: 구글 지도 (가게 이름이 한글로 보임)
+    box.innerHTML = '';
+    var m = new g.maps.Map(box, { center: hotel, zoom: 14, disableDefaultUI: true, zoomControl: true, gestureHandling: 'greedy', clickableIcons: false }), bd = new g.maps.LatLngBounds(), iw = new g.maps.InfoWindow();
+    var pin = function (ll, label, color, title) {
+      var mk = new g.maps.Marker({ position: ll, map: m, label: { text: label, color: '#fff', fontWeight: '800', fontSize: '14px' },
+        icon: { path: g.maps.SymbolPath.CIRCLE, scale: 14, fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 } });
+      mk.addListener('click', function () { iw.setContent('<b style="color:#000">' + esc(title) + '</b>'); iw.open(m, mk); });
+    };
+    ps.forEach(function (p) { var ll = { lat: Number(p.lat), lng: Number(p.lng) }; bd.extend(ll); pin(ll, String(all.indexOf(p) + 1), '#8a4b2a', p.name); });
+    if (isFinite(hotel.lat)) pin(hotel, '숙', '#1f3f6e', '숙소');
+    if (ps.length === 1) { m.setCenter(bd.getCenter()); m.setZoom(16); } else m.fitBounds(bd, 30);
+  }).catch(leaf);
+}
+document.addEventListener('click', function (e) {
+  var t = e.target.closest && e.target.closest('[data-warea],[data-wdel],#w-add'); if (!t) return;
+  if (t.dataset.warea) { S.wArea = t.dataset.warea; renderMain(); return; }
+  if (t.dataset.wdel) {
+    var p = myPlaces().filter(function (x) { return x.id === t.dataset.wdel; })[0]; if (!p) return;
+    confirmBox('「' + p.name + '」을 목록에서 뺄까요?', '빼기').then(function (y) { if (!y) return; call('deleteMyPlace', { id: p.id }).then(function (r) { S.D.myPlaces = r.myPlaces; saveCache(); renderMain(); toast('뺐어요.'); }).catch(function (er) { toast(er.message); }); });
+    return;
+  }
+  var q = (el('#w-q') || {}).value || ''; if (q.trim().length < 2) { toast('가게 이름이나 링크를 넣어 주세요.'); return; }
+  t.disabled = true; t.textContent = '찾는 중…';
+  call('addMyPlace', { q: q.trim() }).then(function (r) { S.D.myPlaces = r.myPlaces; saveCache(); renderMain(); toast('넣었어요.'); }).catch(function (er) { toast(er.message); t.disabled = false; t.textContent = '넣기'; });
+});
 function renderMainBehind() {
   var m = el('#main'); if (!m) return;
   var h = S.tab === 'score' ? viewScore() : null; if (h === null) return;
@@ -5970,6 +6067,8 @@ function adminHtml() {
     '<div class="card"><b>📜 변경 기록</b><div id="logbox"><button class="btn sm" data-act="log">불러오기</button></div></div>' +
     '<div class="card"><b>⛳ 골프 기능</b><p class="small muted">켜면 아래 메뉴에 스코어가 나와요. 이번 여행은 골프가 없어서 꺼 둡니다.</p>' +
       '<div class="seg-tabs" style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr"><button class="' + (golfOn() ? 'on' : '') + '" data-golf="1">켜기</button><button class="' + (golfOn() ? '' : 'on') + '" data-golf="0">끄기</button></div></div>' +
+    '<div class="card"><b>🥃 위스키 지도 보여 줄 사람</b><p class="small muted">이름을 누르면 그 사람 앱에 🥃 위스키 메뉴가 생겨요(보기만, 가게 넣기·빼기는 회장님만). 다시 누르면 숨겨요.</p>' +
+      '<div class="w-ok">' + S.D.members.filter(function (m) { return m.role !== 'admin'; }).map(function (m) { return '<button class="btn sm' + (m.whisky_ok ? ' on' : '') + '" data-wok="' + esc(m.name) + '">' + (m.whisky_ok ? '🥃 ' : '') + esc(m.name) + '</button>'; }).join('') + '</div></div>' +
     '<div class="card"><b>💰 경비 화면을 회원에게</b><p class="small muted">지출·정산·회비·공금 화면을 회원도 볼지 정합니다. 숨기면 회원 폰에는 경비 메뉴가 없고, 자료도 보내지 않습니다.</p>' +
       '<div class="seg-tabs" style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr"><button class="' + (S.D.moneyOpen ? 'on' : '') + '" data-money="1">👀 보이기</button><button class="' + (S.D.moneyOpen ? '' : 'on') + '" data-money="0">🙈 숨기기</button></div>' +
       '<p class="small muted" style="margin:6px 0 0">지금: <b>' + (S.D.moneyOpen ? '회원도 봅니다' : '관리자만 봅니다') + '</b></p></div>' +
@@ -6265,6 +6364,12 @@ function bindMain() {
         if (!y) return;
         call('setMoneyOpen', { open: open }).then(function () { S.D.moneyOpen = open; saveCache(); renderMain(); toast(open ? '이제 회원들도 경비 화면을 봅니다.' : '이제 경비 화면은 관리자만 봅니다.'); }).catch(function (e) { toast(e.message); });
       });
+    };
+  });
+  els('[data-wok]', m).forEach(function (b) {
+    b.onclick = function () {
+      var nm = b.dataset.wok, mm = S.D.members.filter(function (x) { return x.name === nm; })[0], on = !(mm && mm.whisky_ok);
+      call('setWhiskyOk', { name: nm, on: on }).then(function (r) { S.D.members = r.members; saveCache(); renderMain(); toast(nm + ' 님에게 위스키 지도를 ' + (on ? '보여 줘요.' : '숨겼어요.')); }).catch(function (e) { toast(e.message); });
     };
   });
   els('[data-golf]', m).forEach(function (b) {
