@@ -102,6 +102,9 @@ header.top .title{font-size:calc(17px*var(--fs));line-height:1.25}
 .wmap{position:relative;z-index:0;height:min(70vw,340px);border-radius:12px;overflow:hidden;background:var(--line)}
 .w-pin{width:30px;height:30px;border-radius:50%;background:#8a4b2a;color:#fff;font:800 15px/30px sans-serif;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .w-pin.hotel{background:#1f3f6e;font-size:15px}
+.w-pin.on{background:#e8590c;width:38px;height:38px;line-height:38px;font-size:18px;border-width:3px;margin:-4px 0 0 -4px}
+.w-row.on{background:rgba(232,89,12,.12);border-radius:10px}
+.w-tap{cursor:pointer}
 .w-row{display:flex;gap:10px;border-top:1px solid var(--line);padding:10px 0;margin-top:8px}
 .w-no{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#8a4b2a;color:#fff;font-weight:800;text-align:center;line-height:28px}
 .w-area{display:flex;flex-wrap:wrap;gap:4px}
@@ -896,7 +899,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-9';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-10';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
@@ -4098,10 +4101,10 @@ function viewWhisky() {
       '<div class="map-wrap" style="margin-top:8px"><div id="wmap" class="wmap">' + (need ? '<div class="small muted" style="padding:20px;text-align:center">가게 위치를 찾는 중…</div>' : '') + '</div>' +
       '<div class="map-cover"><span>👆 지도를 움직이려면 한 번 누르세요</span></div></div>' +   // 한 손가락은 화면 넘기기 (일정 지도와 같게, 2026-11-25)
       '<a class="btn sm" style="margin-top:8px" target="_blank" href="https://www.google.com/maps/search/whisky+liquor+store/@' + S.D.settings.hotel_lat + ',' + S.D.settings.hotel_lng + ',15z">🔎 구글지도에서 근처 술가게 더 찾기</a></div>' +
-    '<div class="card"><b>🥃 가게 ' + list.length + '곳</b>' + list.map(function (p) {
+    '<div class="card"><b>🥃 가게 ' + list.length + '곳</b><div class="small muted">가게 이름을 누르면 지도에서 어디인지 보여요.</div>' + list.map(function (p) {
       var n = ps.indexOf(p) + 1, has = p.lat !== '' && p.lat !== undefined;
-      return '<div class="w-row"><span class="w-no">' + n + '</span><div style="flex:1;min-width:0"><b>' + esc(p.name) + '</b>' +
-        '<div class="small muted">' + esc([p.area, p.memo].filter(Boolean).join(' · ')) + '</div>' +
+      return '<div class="w-row' + (S.wSel === p.id ? ' on' : '') + '" data-wrow="' + esc(p.id) + '"><span class="w-no w-tap"' + (has ? ' data-wfocus="' + esc(p.id) + '"' : '') + '>' + n + '</span><div style="flex:1;min-width:0"><div class="w-tap"' + (has ? ' data-wfocus="' + esc(p.id) + '"' : '') + '><b>' + esc(p.name) + '</b>' +
+        '<div class="small muted">' + esc([p.area, p.memo].filter(Boolean).join(' · ')) + '</div></div>' +
         '<div class="row wrap-row" style="margin-top:6px">' +
           (has ? '<a class="btn sm pri" target="_blank" href="https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng + '&travelmode=walking">🚶 길찾기</a>' : '') +
           '<a class="btn sm" target="_blank" href="' + esc(p.gurl || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.query || p.name))) + '">🗺️ 가게 정보</a>' +
@@ -4110,7 +4113,7 @@ function viewWhisky() {
     '<div class="card"><b>＋ 가게 더 넣기</b><p class="small muted" style="margin:4px 0">가게 이름이나, 구글지도에서 [공유 → 링크 복사]한 주소를 붙여 넣으세요.</p>' +
       '<div class="row" style="flex-wrap:nowrap"><input class="inp" id="w-q" placeholder="예) 리커마운틴 난바" style="flex:1;min-width:0"><button class="btn pri" id="w-add" style="flex-shrink:0">넣기</button></div></div>');
 }
-var wMapObj = null;
+var wMapObj = null, wPins = {};   // wPins[가게 id](true/false) = 지도에서 그 가게 표시 (2026-11-25)
 function drawWhiskyMap() {
   var box = el('#wmap'); if (!box) return;
   var area = S.wArea || '전체', all = myPlaces(), ps = all.filter(function (p) { return p.lat !== '' && p.lat !== undefined && (area === '전체' || p.area === area); });
@@ -4120,14 +4123,17 @@ function drawWhiskyMap() {
     box.innerHTML = '';
     var m = L.map(box, { zoomControl: true, attributionControl: false });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(m);
-    var b = [];
+    var b = [], ic = function (n, on) { return L.divIcon({ className: '', html: '<div class="w-pin' + (on ? ' on' : '') + '">' + n + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }); };
+    wPins = {};
     ps.forEach(function (p) {
       var n = all.indexOf(p) + 1, ll = [Number(p.lat), Number(p.lng)]; b.push(ll);
-      L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="w-pin">' + n + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(m).bindPopup('<b>' + esc(p.name) + '</b>');
+      var mk = L.marker(ll, { icon: ic(n) }).addTo(m).bindPopup('<b>' + esc(p.name) + '</b>');
+      wPins[p.id] = function (on) { mk.setIcon(ic(n, on)); mk.setZIndexOffset(on ? 1000 : 0); if (on) { m.setView(ll, 17); mk.openPopup(); } };
     });
     if (isFinite(hotel.lat)) L.marker([hotel.lat, hotel.lng], { icon: L.divIcon({ className: '', html: '<div class="w-pin hotel">🏨</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(m).bindPopup('숙소');
     if (b.length === 1) m.setView(b[0], 16); else m.fitBounds(b, { padding: [24, 24] });
     wMapObj = m;
+    if (S.wSel && wPins[S.wSel]) wPins[S.wSel](true);
   };
   var fail = function (e) { box.innerHTML = '<div class="small muted" style="padding:16px">' + esc(e.message) + '</div>'; };
   var leaf = function () { loadLeaflet().then(draw).catch(fail); };
@@ -4139,15 +4145,37 @@ function drawWhiskyMap() {
       var mk = new g.maps.Marker({ position: ll, map: m, label: { text: label, color: '#fff', fontWeight: '800', fontSize: '14px' },
         icon: { path: g.maps.SymbolPath.CIRCLE, scale: 14, fillColor: color, fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 } });
       mk.addListener('click', function () { iw.setContent('<b style="color:#000">' + esc(title) + '</b>'); iw.open(m, mk); });
+      return mk;
     };
-    ps.forEach(function (p) { var ll = { lat: Number(p.lat), lng: Number(p.lng) }; bd.extend(ll); pin(ll, String(all.indexOf(p) + 1), '#8a4b2a', p.name); });
+    wPins = {};
+    ps.forEach(function (p) {
+      var ll = { lat: Number(p.lat), lng: Number(p.lng) }, lb = String(all.indexOf(p) + 1); bd.extend(ll);
+      var mk = pin(ll, lb, '#8a4b2a', p.name);
+      wPins[p.id] = function (on) {   // 목록에서 고른 가게: 주황·크게·맨 위
+        mk.setIcon({ path: g.maps.SymbolPath.CIRCLE, scale: on ? 19 : 14, fillColor: on ? '#e8590c' : '#8a4b2a', fillOpacity: 1, strokeColor: '#fff', strokeWeight: on ? 3 : 2 });
+        mk.setLabel({ text: lb, color: '#fff', fontWeight: '800', fontSize: on ? '17px' : '14px' });
+        mk.setZIndex(on ? 1000 : null);
+        if (on) { m.setCenter(ll); m.setZoom(17); iw.setContent('<b style="color:#000">' + esc(p.name) + '</b>'); iw.open(m, mk); }
+      };
+    });
     if (isFinite(hotel.lat)) pin(hotel, '숙', '#1f3f6e', '숙소');
     if (ps.length === 1) { m.setCenter(bd.getCenter()); m.setZoom(16); } else m.fitBounds(bd, 30);
+    if (S.wSel && wPins[S.wSel]) wPins[S.wSel](true);
   }).catch(leaf);
 }
 document.addEventListener('click', function (e) {
-  var t = e.target.closest && e.target.closest('[data-warea],[data-wdel],#w-add'); if (!t) return;
-  if (t.dataset.warea) { S.wArea = t.dataset.warea; renderMain(); return; }
+  var t = e.target.closest && e.target.closest('[data-warea],[data-wdel],[data-wfocus],#w-add'); if (!t) return;
+  if (t.dataset.warea) { S.wArea = t.dataset.warea; S.wSel = null; renderMain(); return; }
+  if (t.dataset.wfocus) {   // 목록의 가게를 누르면 지도로 올라가 그 가게를 보여 줌
+    var id = t.dataset.wfocus;
+    if (S.wSel && wPins[S.wSel]) wPins[S.wSel](false);
+    S.wSel = id;
+    document.querySelectorAll('.w-row.on').forEach(function (r) { r.classList.remove('on'); });
+    var row = document.querySelector('.w-row[data-wrow="' + id + '"]'); if (row) row.classList.add('on');
+    var mp = el('#wmap'); if (mp) mp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (wPins[id]) wPins[id](true);
+    return;
+  }
   if (t.dataset.wdel) {
     var p = myPlaces().filter(function (x) { return x.id === t.dataset.wdel; })[0]; if (!p) return;
     confirmBox('「' + p.name + '」을 목록에서 뺄까요?', '빼기').then(function (y) { if (!y) return; call('deleteMyPlace', { id: p.id }).then(function (r) { S.D.myPlaces = r.myPlaces; saveCache(); renderMain(); toast('뺐어요.'); }).catch(function (er) { toast(er.message); }); });
