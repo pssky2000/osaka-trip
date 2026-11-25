@@ -140,10 +140,20 @@ header.top .title{font-size:calc(17px*var(--fs));line-height:1.25}
 .flight .times .arrow{align-self:center}
 .flight .meet-link{color:#fff;text-decoration:underline}
 .flight .kr{font-size:calc(12px*var(--fs));opacity:.8}
-.flight .fmeet{display:flex;align-items:center;justify-content:space-between;background:#fff;color:#00695c;border-radius:10px;padding:6px 12px;margin:-2px 0 10px;font-weight:800;font-size:calc(15px*var(--fs))}
-.flight .fmeet b{font-size:calc(24px*var(--fs));line-height:1.1}
-.flight.back .fmeet{color:#c2410c}
+.flight .fmeet{display:flex;align-items:center;justify-content:space-between;background:#ffd43b;color:#004d40;border-radius:12px;padding:8px 14px;margin:-2px 0 12px;font-weight:800;font-size:calc(15px*var(--fs));box-shadow:0 4px 10px rgba(0,0,0,.18)}   /* 공항 미팅: 노란 띠 (시안 B, 2026-11-25) */
+.flight .fmeet b{font-size:calc(30px*var(--fs));line-height:1}
 .time-note{margin:2px 4px 10px;line-height:1.45}
+.time-note .tn-em{color:#e8590c;font-weight:800}
+:root[data-theme=dark] .time-note .tn-em{color:#ffa94d}
+@media (prefers-color-scheme: dark){:root:not([data-theme=light]) .time-note .tn-em{color:#ffa94d}}
+.meet-card{border:2px solid #ffd43b;background:linear-gradient(180deg,rgba(255,212,59,.12),rgba(255,212,59,.02)),var(--card)}   /* 준비물 카드(주황 테두리)와 같은 방식, 노란 톤 */
+.meet-card .mc-d{color:#e0a800}
+:root[data-theme=dark] .meet-card .mc-d{color:#ffd43b}
+@media (prefers-color-scheme: dark){:root:not([data-theme=light]) .meet-card .mc-d{color:#ffd43b}}
+.meet-card .mc-d{font-weight:800;font-size:calc(15px*var(--fs));margin-bottom:8px}
+.meet-card .mc-band{display:flex;align-items:center;justify-content:space-between;background:#ffd43b;color:#004d40;border-radius:12px;padding:8px 14px;font-weight:800;font-size:calc(15px*var(--fs));box-shadow:0 4px 10px rgba(0,0,0,.18)}
+.meet-card .mc-band b{font-size:calc(30px*var(--fs));line-height:1}
+.meet-card .mc-p{margin-top:8px;font-size:calc(14px*var(--fs));color:var(--sub)}
 .meet-ban{margin-top:10px;padding:8px 12px;border-radius:10px;background:#26a69a;color:#fff}
 .meet-ban .mb-t{font-size:calc(22px*var(--fs))}
 .meet-ban .mb-p{font-size:calc(13px*var(--fs));opacity:.95;margin-top:2px}
@@ -913,7 +923,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-11';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-12';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
@@ -1942,14 +1952,14 @@ function meetHtml(f) {
   return '<div class="meet-grid"><span>⏰' + (time ? ' ' + esc(time) : '') + '</span><div><div>' + link(first, f.meet_url) + '</div>' +
     (f.meet2 ? '<div>' + link(f.meet2, f.meet_url2) + '</div>' : '') + '</div></div>';
 }
-function flightCard(f) {
+function flightCard(f, opt) {   // opt.meetBan: 일정 탭에서만 '공항 미팅' 띠 (요약은 기상 카드에 있어 중복, 2026-11-25)
   var off = Number(S.D.settings.tz_offset_from_korea || 0);
   // 시각 밑 셋째 줄: 해외 공항은 한국 시각, 인천은 터미널 (양쪽 줄 수를 같게 해서 시각이 나란히 보이게)
   var term = String(f.terminal || '').replace(/^인천\s*/, '').replace(/\s*도착$/, '');
   function kr(t, code) { if (!off) return ''; return code === 'ICN' ? '<div class="kr">' + esc(term || ' ') + '</div>' : '<div class="kr">한국 ' + fromMin(toMin(t) - off * 60) + '</div>'; }
   var back = f.dir.indexOf('오는') >= 0, mp = f.meet ? meetParts(f) : null;
   return '<div class="flight' + (back ? ' back' : '') + '">' +
-    (mp && mp.time ? '<div class="fmeet"><span>👥 공항 미팅</span><b>' + esc(mp.time) + '</b></div>' : '') +
+    (mp && mp.time && opt && opt.meetBan && !back ? '<div class="fmeet"><span>👥 공항 미팅</span><b>' + esc(mp.time) + '</b></div>' : '') +
     '<div class="row between fhead"><span class="lbl">' + (back ? '🛬 ' : '🛫 ') + esc(f.dir) + ' · ' + md(f.date) + '(' + wd(f.date) + ')</span><span class="no">' + esc(f.airline) + ' ' + esc(f.flight) + '</span></div>' +
     '<div class="times"><div><div class="t">' + esc(f.dep) + '</div><div class="ap">' + esc(f.from) + ' ' + esc(f.from_code) + '</div>' + kr(f.dep, f.from_code) + '</div>' +
     '<div class="arrow">✈</div>' +
@@ -1962,10 +1972,10 @@ function flightCard(f) {
     }).join('') + '</div>' : '') +
   '</div>';
 }
-function flightsHtml(filter) {
+function flightsHtml(filter, opt) {
   var fs = S.D.flights.filter(filter || function () { return true; });
   if (!fs.length) return '';
-  return '<div class="flights">' + fs.map(flightCard).join('') + '</div>';
+  return '<div class="flights">' + fs.map(function (f) { return flightCard(f, opt); }).join('') + '</div>';
 }
 
 function fxUse() { return S.fx && (S.fx.cash || S.fx.rate); }   // 계산기·머리 숫자: 현금 살 때 (없으면 기준율)
@@ -2240,7 +2250,7 @@ function viewAll() {
   // 출발 전(출발일까지)은 준비물 카드를 맨 위에, 여행 중에는 맨 아래에 (도착일 지나면 숨김)
   var nd = localNow().date, pk = nd <= S.D.settings.end_date ? packCard() : '', early = nd <= S.D.settings.start_date;
   var wc = wrapCard(), wTop = wrapReady();   // 마지막 라운드 날부터는 맨 위, 그 전 관리자 미리 보기는 맨 아래
-  var html = (wTop ? wc : '') + wakeCard() + (early ? pk : '') + flightsHtml() + fxHtml();
+  var html = (wTop ? wc : '') + meetCard() + (early ? pk : '') + flightsHtml() + fxHtml();
   dates().forEach(function (d) {
     var its = itemsOf(d).filter(function (i) { return i.fixed || i.type === 'golf' || i.type === 'flight' || i.type === 'hotel'; });
     html += '<div class="card daycard" data-go="' + d + '" style="cursor:pointer"><div class="row between"><b class="dhead">' + md(d) + ' (' + wd(d) + ') · ' + esc(dayLabel(d)) + '</b><span class="muted small">자세히 ›</span></div>' +
@@ -2374,8 +2384,8 @@ function golfDay(date) {
   }).join('');
 }
 
-// 도착날(마지막 날)은 한국 날씨: 인천공항·청주 (12월 한국은 영하일 수 있음)
-var WX_KR = [['✈️', '인천공항', 37.4602, 126.4407], ['🏠', '청주', 36.6424, 127.4890]];
+// 도착날(마지막 날)은 한국 날씨: 오사카는 청주공항으로 돌아옴 (2026-11-25 점검: 태국 앱의 인천공항이 남아 있었음)
+var WX_KR = [['✈️', '청주공항', 36.7166, 127.4991]];
 function wxKrCard(date) {
   var rows = WX_KR.map(function (p, i) {
     var w = S.wxKr && S.wxKr[i] && S.wxKr[i][date];
@@ -2388,8 +2398,8 @@ function wxKrCard(date) {
   if (rows) return '<div class="card wx" style="display:block"><div class="small muted">🇰🇷 도착하는 날 한국 날씨</div>' + rows +
     (cold ? '<div class="small" style="margin-top:6px;color:var(--warn)">🧥 한국은 춥습니다. 두꺼운 겉옷을 기내 가방에 챙기세요.</div>' : '') + '</div>';
   if (!S.wxKr) return '';
-  return '<div class="card wx"><div class="ico">🧥</div><div><div class="small"><b>🇰🇷 도착하는 날 인천공항·청주 날씨는 약 2주 전부터 보입니다.</b></div>' +
-    '<div class="small muted">12월 하순 인천·청주는 보통 낮 3℃ 안팎 · 밤 영하 6℃ 안팎입니다. 두꺼운 겉옷을 기내 가방에 챙기세요.</div></div></div>';
+  return '<div class="card wx"><div class="ico">🧥</div><div><div class="small"><b>🇰🇷 도착하는 날 청주 날씨는 약 2주 전부터 보입니다.</b></div>' +
+    '<div class="small muted">11월 말 청주는 보통 낮 10℃ 안팎 · 밤 0℃ 안팎입니다. 따뜻한 겉옷을 기내 가방에 챙기세요.</div></div></div>';
 }
 function wxCard(date) {
   if (S.D && S.D.settings && date === S.D.settings.end_date) return wxKrCard(date);
@@ -2409,9 +2419,10 @@ function viewDay(date) {
   var letterOf = {}; pts.forEach(function (p) { p.ids.forEach(function (id) { letterOf[id] = p.letter; }); });
   var s = S.D.settings;
   var fl = '';
-  if (date === s.start_date) fl = flightsHtml(function (f) { return f.date === date; });
-  S.D.flights.forEach(function (f) { if (f.date === date && date !== s.start_date) fl = flightsHtml(function (g) { return g === f; }); });
-  if (date === s.end_date) fl = flightsHtml(function (f) { return f.arr_date === date; });
+  var MB = { meetBan: true };
+  if (date === s.start_date) fl = flightsHtml(function (f) { return f.date === date; }, MB);
+  S.D.flights.forEach(function (f) { if (f.date === date && date !== s.start_date) fl = flightsHtml(function (g) { return g === f; }, MB); });
+  if (date === s.end_date) fl = flightsHtml(function (f) { return f.arr_date === date; }, MB);
 
   var list = '';
   its.forEach(function (it, i) {
@@ -2437,7 +2448,7 @@ function viewDay(date) {
   // 알림 카드 순서: 골프 알림은 골프장 카드 위, 비행기 알림은 골프장 카드 아래(그날 골프가 먼저)·항공 카드 바로 위
   var nc = nextCard(date), ncFl = nc.indexOf('next fl') >= 0;
   // 시각 안내 (2026-11-25 사용자 요청: 가이드 카톡 "오전 8시~오후 6~7시", 자세한 시각은 미정)
-  var timeNote = '<p class="small muted time-note">✈️ 비행기·공항 미팅 시각만 확정이에요. 관광·식사 시각은 예상이라 현지에서 가이드 안내에 따라 바뀔 수 있어요. (보통 아침 8시 출발, 저녁 6~7시 호텔 도착)</p>';
+  var timeNote = '<p class="small muted time-note">✈️ 비행기·공항 미팅 시각만 확정이에요. <b class="tn-em">관광·식사 시각은 예상이라 현지에서 가이드 안내에 따라 바뀔 수 있어요.</b> (보통 아침 8시 출발, 저녁 6~7시 호텔 도착)</p>';
   return timeNote + (ncFl ? golfDay(date) + nc : nc + golfDay(date)) + fl + wxCard(date) + dayVouchers(date) +
     '<div class="day-grid"><div class="map-col">' + map + '</div>' +
     '<div class="list-col">' + adminTip + '<ul class="tl" id="tl">' + list + '</ul>' +
@@ -2652,6 +2663,17 @@ function wakeOf(date) {
   return { time: fromMin(t), why: '첫 일정 ' + its[0].time + ' ' + its[0].title + '의 1시간 전' };
 }
 /* 요약 탭: 오후 3시부터 '내일 기상' 카드 (여행 전날 ~ 마지막 전날) */
+/* 요약 탭: 공항 미팅 카드 — 출발 전날부터 미팅 시각까지 (기상 시각은 각자 알아서, 2026-11-25 사용자) */
+function meetCard() {
+  var n = localNow(), tm = addDays(n.date, 1);
+  var f = (S.D.flights || []).filter(function (x) { return x.meet && x.dir.indexOf('오는') < 0 && (x.date === n.date || x.date === tm); })[0];
+  if (!f) return '';
+  var p = meetParts(f);
+  if (f.date === n.date && p.time && n.min > toMin(p.time)) return '';   // 미팅 시각이 지나면 안 보임
+  return '<div class="card meet-card"><div class="mc-d">✈️ ' + (f.date === n.date ? '오늘' : '내일') + ' ' + md(f.date) + '(' + wd(f.date) + ')</div>' +
+    '<div class="mc-band"><span>👥 공항 미팅</span><b>' + esc(p.time) + '</b></div>' +
+    '<div class="mc-p">📍 ' + esc(p.place) + '</div></div>';
+}
 function wakeCard() {
   var n = localNow(), st = S.D.settings, tm = addDays(n.date, 1);
   if (n.min < 15 * 60 || tm < st.start_date || tm > st.end_date) return '';
@@ -2865,7 +2887,7 @@ function editItem(it, preset) {
     '<label class="lb">종류' + (ty0 ? '' : ' <span class="small muted">(골라 주세요)</span>') + '</label><input type="hidden" id="e-type" value="' + esc(ty0) + '"><div class="tygrid" id="e-tyg">' + Object.keys(TYPES).filter(function (k) { return k !== 'golf' || golfOn() || ty0 === 'golf'; }).map(function (k) { return '<button type="button" data-ty="' + k + '"' + (k === ty0 ? ' class="on"' : '') + '><span class="e">' + TYPES[k][0] + '</span>' + TYPES[k][1] + '</button>'; }).join('') + '</div>' +
     '<label class="lb">할 일 <span class="small muted">(종류를 고르면 자동으로 채워져요. 고쳐 써도 돼요)</span></label><input class="inp" id="e-title" value="' + esc(it.title) + '" placeholder="예) 저녁">' +
     '<div class="fbox"><div class="fbt">📍 장소</div>' +
-    '<label class="lb" style="margin-top:0">🔎 장소 찾기 (이름이나 주소)</label><div class="row"><input class="inp" id="e-q" placeholder="예) 터미널21 파타야" value="' + esc(it.place || '') + '"><button class="btn sm pri" id="e-find" style="flex:none;white-space:nowrap">찾기</button></div>' +
+    '<label class="lb" style="margin-top:0">🔎 장소 찾기 (이름이나 주소)</label><div class="row"><input class="inp" id="e-q" placeholder="예) 도톤보리 글리코 간판" value="' + esc(it.place || '') + '"><button class="btn sm pri" id="e-find" style="flex:none;white-space:nowrap">찾기</button></div>' +
     '<button type="button" class="btn" id="e-here" style="width:100%;margin-top:6px">📡 지금 있는 곳으로 찾기</button>' +
     '<div id="e-res"></div>' +
     '<details style="margin-top:6px"><summary class="small muted">구글지도 링크로 넣기</summary>' +
@@ -4980,11 +5002,12 @@ function vInfo(v) {
   return (V_INFO[ck] = { date: kind === 'flight' ? '' : date, kind: kind, title: title, owner: owner });
 }
 var V_KIND = { flight: ['✈️', 0], car: ['🚐', 1], golf: ['⛳', 2] };
+var vNat = function (x, y) { return String(x || '').localeCompare(String(y || ''), 'ko', { numeric: true }); };   // 숫자는 크기 순: 1, 2, … 10 (2026-11-25 사용자: 10이 1 앞에 나왔음)
 function vSort(a, b) {
   var ia = vInfo(a), ib = vInfo(b), me = S.me && S.me.name;
   var ka = (V_KIND[ia.kind] || [0, 3])[1], kb = (V_KIND[ib.kind] || [0, 3])[1];
-  if (ia.kind === 'flight' && ib.kind === 'flight') return (ia.owner === me ? -1 : 0) - (ib.owner === me ? -1 : 0) || (ia.owner < ib.owner ? -1 : 1);   // 내 항공권 먼저
-  return ka - kb || (ia.title < ib.title ? -1 : 1);
+  if (ia.kind === 'flight' && ib.kind === 'flight') return (ia.owner === me ? -1 : 0) - (ib.owner === me ? -1 : 0) || vNat(ia.owner, ib.owner);   // 내 항공권 먼저
+  return ka - kb || vNat(ia.title, ib.title) || vNat(a.name, b.name);
 }
 function flightDates() { return (S.D.flights || []).map(function (f) { return String(f.date || ''); }).filter(function (d) { return d; }); }
 // 그날 바우처: 날짜가 맞는 것 + 비행기 타는 날엔 항공권(회원은 자기 것만, 관리자는 전부)
