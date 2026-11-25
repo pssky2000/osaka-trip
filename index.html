@@ -957,7 +957,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-14';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-15';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
@@ -4681,15 +4681,21 @@ function viewSettle(c) {
   if (allDone) html += '<p class="chip" style="margin-top:8px">🎉 송금이 모두 끝났습니다. 정산 종료!</p>';
   html += shareRow('settle', '정산 결과 · 누가 누구에게') + '</div>';
 
-  // 회원별
-  html += '<div class="card"><b>👥 회원별</b><p class="small muted" style="margin:4px 0 0">받을·보낼 돈 = <b>내가 낸 공동경비</b> − <b>나눠 낼 몫</b>(공동경비를 함께한 사람 수로 나눈 내 몫)</p>';
-  names.forEach(function (n) {
-    var b = c.net[n], cls = b > 0 ? 'good' : b < 0 ? 'bad' : '';
-    html += '<div class="mrow"><div><b>' + esc(n) + '</b>' + (settleOn('confirm', n, sig) ? ' <span class="chip">✓ 확인</span>' : '') +
-      '<div class="small muted">내가 낸 공동경비 ' + baht(c.paid[n]) + '<br>− 나눠 낼 몫 ' + baht(c.owed[n]) + ' = <b>' + (c.paid[n] - c.owed[n] >= 0 ? '+' : '−') + baht(Math.abs(Math.round((c.paid[n] - c.owed[n]) * 100) / 100)) + '</b></div>' +
-      '<div class="small muted">(참고) 공금·지원까지 합친 내 몫 ' + baht(Math.round(c.enjoyed[n])) + ' (약 ' + wonShort(c.enjoyed[n] * c.rate) + ')</div></div>' +
-      '<div class="bal ' + cls + '">' + (!b ? '0원' : (b > 0 ? '받을 돈<br>' : '보낼 돈<br>') + won(Math.abs(b))) + '</div></div>';
-  });
+  // 회원별 (2026-11-25 사용자): 한 사람 한 줄, 이름을 누르면 계산 내용. 먼저 갚기를 할 수 있으면 카드째 접어 둠
+  S.mDet = S.mDet || {};
+  html += '<div class="card"><b>👥 회원별</b>';
+  if (canRepay) html += '<p class="small" style="margin:6px 0 8px;color:var(--warn)">💡 공금으로 먼저 갚으면 모두 0원이 돼요. 아래는 먼저 갚기 전 금액이에요.</p>' +
+    '<button class="btn sm" data-act="m-fold">' + (S.mOpen ? '▲ 회원별 접기' : '▼ 회원별 펼쳐 보기') + '</button>';
+  if (!canRepay || S.mOpen) {
+    html += '<p class="small muted" style="margin:6px 0 0">받을·보낼 돈 = <b>내가 낸 공동경비</b> − <b>나눠 낼 몫</b> · 이름을 누르면 계산 내용이 보여요</p>';
+    names.forEach(function (n) {
+      var b = c.net[n], cls = b > 0 ? 'good' : b < 0 ? 'bad' : '', open = !!S.mDet[n];
+      html += '<button type="button" class="mrow mrow-btn" data-act="mdet" data-nm="' + esc(n) + '" style="align-items:center"><span><b>' + esc(n) + '</b>' + (settleOn('confirm', n, sig) ? ' <span class="chip">✓ 확인</span>' : '') + ' <span class="muted small">' + (open ? '▲' : '▼') + '</span></span>' +
+        '<span class="bal ' + cls + '">' + (!b ? '0원' : (b > 0 ? '받을 돈 ' : '보낼 돈 ') + won(Math.abs(b))) + '</span></button>' +
+        (open ? '<div class="small muted" style="padding:0 0 8px">내가 낸 공동경비 ' + baht(c.paid[n]) + '<br>− 나눠 낼 몫 ' + baht(c.owed[n]) + ' = <b>' + (c.paid[n] - c.owed[n] >= 0 ? '+' : '−') + baht(Math.abs(Math.round((c.paid[n] - c.owed[n]) * 100) / 100)) + '</b>' +
+          '<br>(참고) 공금·지원까지 합친 내 몫 ' + baht(Math.round(c.enjoyed[n])) + ' (약 ' + wonShort(c.enjoyed[n] * c.rate) + ')</div>' : '');
+    });
+  }
   html += '</div>';
 
   // 지원 감사 보드
@@ -6325,7 +6331,9 @@ function bindMain() {
       if (a.indexOf('bl-') === 0) { baselineAct(a, b); return; }   // 🧪 시험 기본값
       if (a === 'repay') { repayForm(b.dataset.src); return; }
       if (a === 'undo-repay') { undoRepay(); return; }
-      if (a === 'tr-fold') { S.trOpen = !S.trOpen; renderMain(); return; }   // 송금 목록 접기·펼치기
+      if (a === 'tr-fold') { S.trOpen = !S.trOpen; renderMain(); return; }
+      if (a === 'm-fold') { S.mOpen = !S.mOpen; renderMain(); return; }   // 회원별 접기·펼치기
+      if (a === 'mdet') { S.mDet = S.mDet || {}; S.mDet[b.dataset.nm] = !S.mDet[b.dataset.nm]; renderMain(); return; }   // 회원별 계산 내용   // 송금 목록 접기·펼치기
       if (a === 'unlock') { unlockDevice(b.dataset.nm); return; }
       if (a === 'dvphone') { devPhoneTap(b.dataset.nm); return; }
       if (a === 'dvpc') { devPcTap(b.dataset.nm); return; }
