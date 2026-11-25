@@ -958,7 +958,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-16';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-17';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
@@ -1832,8 +1832,11 @@ function vRun(said, out, sh) {
   call('voiceParse', { text: said }).then(function (r) { vShow(r, said, out, sh); }).catch(function () { vShow(null, said, out, sh); });
 }
 function voiceOpen() {
-  var ex = ['3번 홀 5타', '7번 홀 보기', '상민이 5번 홀 6타', '전반 45 후반 48', '니어핀 기정이 3번 홀', '다음 일정', '오늘 날씨', '환율', '지금 순위', '내일 일정', '사진'];
-  if (canMoney()) ex.splice(4, 0, '저녁 3000엔 공금', '마사지 2000엔 상민이가 쏨');
+  // 2026-11-26: 골프를 끈 여행(오사카)에서는 골프 예시를 빼고, 이름은 우리 일행으로
+  var me2 = (memberNames().filter(function (n) { return n !== S.me.name; })[0] || '김동섭');
+  var ex = golfOn() ? ['3번 홀 5타', '7번 홀 보기', me2 + ' 5번 홀 6타', '전반 45 후반 48', '니어핀 ' + me2 + ' 3번 홀', '다음 일정', '오늘 날씨', '환율', '지금 순위', '내일 일정', '사진']
+    : ['다음 일정', '오늘 날씨', '환율', '내일 일정', '사진'];
+  if (canMoney()) ex.splice(golfOn() ? 4 : 0, 0, '저녁 3000엔 공금', '술 5000엔 ' + me2 + (((me2.charCodeAt(me2.length - 1) - 0xAC00) % 28) ? '이' : '가') + ' 쏨');
   var sh = sheet('<h3>🎤 말로 하기</h3>' +
     '<button type="button" class="vc-mic" id="vc-mic" aria-label="듣기">🎤</button>' +
     '<div class="vc-st" id="vc-st"></div><div class="vc-said" id="vc-said"></div><div id="vc-out"></div>' +
@@ -4685,9 +4688,12 @@ function viewSettle(c) {
   // 회원별 (2026-11-25 사용자): 한 사람 한 줄, 이름을 누르면 계산 내용. 먼저 갚기를 할 수 있으면 카드째 접어 둠
   S.mDet = S.mDet || {};
   html += '<div class="card"><b>👥 회원별</b>';
-  if (canRepay) html += '<p class="small" style="margin:6px 0 8px;color:var(--warn)">💡 공금으로 먼저 갚으면 모두 0원이 돼요. 아래는 먼저 갚기 전 금액이에요.</p>' +
-    '<button class="btn fold-btn" data-act="m-fold">' + (S.mOpen ? '▲ 회원별 접기' : '▼ 회원별 펼쳐 보기') + '</button>';
-  if (!canRepay || S.mOpen) {
+  // 2026-11-25 사용자: 회원별은 늘 접어 두고 한 줄 요약
+  var nGet = names.filter(function (n) { return c.net[n] > 0; }).length, nGive = names.filter(function (n) { return c.net[n] < 0; }).length;
+  html += '<p class="small" style="margin:6px 0 8px">' + (nGet || nGive ? '받을 사람 <b>' + nGet + '명</b> · 보낼 사람 <b>' + nGive + '명</b>' : '모두 0원이에요 (주고받을 돈 없음)') + '</p>';
+  if (canRepay) html += '<p class="small" style="margin:0 0 8px;color:var(--warn)">💡 공금으로 먼저 갚으면 모두 0원이 돼요. 아래는 먼저 갚기 전 금액이에요.</p>';
+  html += '<button class="btn fold-btn" data-act="m-fold">' + (S.mOpen ? '▲ 회원별 접기' : '▼ 회원별 펼쳐 보기') + '</button>';
+  if (S.mOpen) {
     html += '<p class="small muted" style="margin:6px 0 0">받을·보낼 돈 = <b>내가 낸 공동경비</b> − <b>나눠 낼 몫</b> · 이름을 누르면 계산 내용이 보여요</p>';
     names.forEach(function (n) {
       var b = c.net[n], cls = b > 0 ? 'good' : b < 0 ? 'bad' : '', open = !!S.mDet[n];

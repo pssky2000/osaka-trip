@@ -1,7 +1,7 @@
 /* 화면 파일만 저장해 두는 간단한 service worker
  * - 화면(index.html 등)은 인터넷 먼저 → 안 되면 저장본 (새 버전이 바로 반영됨)
  * - 데이터 요청(script.google.com)은 건드리지 않음 */
-var CACHE = 'osaka-v12';
+var CACHE = 'osaka-v13';
 var FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
