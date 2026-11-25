@@ -8,6 +8,40 @@
 <meta name="theme-color" content="#1f3f6e">
 <meta name="color-scheme" content="light dark">
 <script>try { var th = JSON.parse(localStorage.getItem('trip_theme')); if (th === 'light' || th === 'dark') document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
+<script>
+/* 카톡·네이버 등 '앱 안 브라우저'로 열리면 크롬(안드로이드)·사파리(아이폰)로 넘김 (2026-11-25 사용자: 회원들이 크롬으로 바로 안 열려 불편)
+   - 앱 안에서 들어가면 저장 공간이 달라 크롬에서 다시 들어갈 때 '다른 기기'가 됨 → 앱 안에서는 입장 화면을 가리고 크롬으로 보냄
+   - 자동으로 한 번만 넘김(sessionStorage). 크롬이 없어 되돌아오면 단추·주소 복사 안내만 보여 줌 */
+(function () {
+  var ua = navigator.userAgent || '';
+  if (!/KAKAOTALK|NAVER\(inapp|Line\/|FBAN|FBAV|Instagram|DaumApps|BAND\//i.test(ua)) return;
+  var url = location.href, and = /Android/i.test(ua), kakao = /KAKAOTALK/i.test(ua);
+  var go = function () {
+    if (and) location.href = 'intent://' + url.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(url) + ';end';
+    else if (kakao) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+  };
+  var tried = false; try { tried = sessionStorage.getItem('inapp_go') === '1'; sessionStorage.setItem('inapp_go', '1'); } catch (e) {}
+  if (!tried) go();
+  document.addEventListener('DOMContentLoaded', function () {
+    var b = 'display:block;width:100%;max-width:340px;margin:10px auto 0;padding:16px;border-radius:14px;border:0;font:800 20px sans-serif;';
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#1f3f6e;color:#fff;display:flex;flex-direction:column;justify-content:center;padding:28px;font:18px/1.6 sans-serif;text-align:center';
+    d.innerHTML = '<div style="font-size:60px;line-height:1.2">🏯</div><b style="font-size:24px;margin-top:8px">' + (and ? '크롬' : '사파리') + '에서 열어 주세요</b>' +
+      '<p style="margin:10px 0 6px">카톡 안에서는 앱이 제대로 안 돼요.<br>아래 단추를 누르면 ' + (and ? '크롬' : '사파리') + '으로 열려요.</p>' +
+      ((and || kakao) ? '<button id="ia-go" style="' + b + 'background:#ffd43b;color:#1f3f6e">' + (and ? '크롬' : '사파리') + '으로 열기</button>' : '') +
+      '<button id="ia-cp" style="' + b + 'background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.5)">주소 복사하기</button>' +
+      '<p id="ia-msg" style="min-height:24px;margin:8px 0 0;color:#ffd43b"></p>' +
+      '<p style="font-size:15px;opacity:.85;margin-top:12px">그래도 안 되면 오른쪽 위 <b>⋮</b> (아이폰은 아래 <b>···</b>)<br>→ <b>"다른 브라우저로 열기"</b></p>';
+    document.body.appendChild(d);
+    var g = document.getElementById('ia-go'); if (g) g.onclick = go;
+    document.getElementById('ia-cp').onclick = function () {
+      var ok = function () { document.getElementById('ia-msg').textContent = '복사했어요. ' + (and ? '크롬' : '사파리') + ' 주소창에 붙여 넣으세요.'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(url).then(ok, function () { prompt('주소를 길게 눌러 복사하세요', url); });
+      else prompt('주소를 길게 눌러 복사하세요', url);
+    };
+  });
+})();
+</script>
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -923,7 +957,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-12';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-13';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
