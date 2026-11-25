@@ -763,6 +763,7 @@ html.fab-dim .mic-fab,html.fab-dim .fab-rail{opacity:.12;pointer-events:none}   
 .aw-tot th:first-child,.aw-tot td:first-child{width:4.6em;text-align:left}
 .repay{border:2px solid var(--pri)}
 .undo-rp{border:1px dashed var(--warn)}
+.fold-btn{width:100%;border:1.5px solid var(--pri);background:color-mix(in srgb,var(--pri) 22%,transparent);font-weight:800}   /* 접기·펼치기 단추: 눈에 띄게 (2026-11-25 사용자) */
 .seg-tabs button{position:relative}
 .seg-tabs button.has-dot{padding-right:12px!important}
 .req-dot{position:absolute;top:1px;right:1px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#e53935;color:#fff;font-size:10.5px;font-weight:800;line-height:15px;text-align:center;letter-spacing:0}   /* 관리자 칸: 기다리는 요청 수 (빨간 동그라미) */
@@ -957,7 +958,7 @@ var $app = document.getElementById('app');
 
 /* 서버 주소: 구글 앱스 스크립트 웹앱 (GitHub Pages 화면이 여기로 요청을 보냄) */
 var EXEC_URL = 'https://script.google.com/macros/s/AKfycbxJBTN16c0RaJZqiaTon3on_HDKGRTvt9o22w4i4PMBY93OZB_-JeZH8cUjdRbzblVh/exec';   // 오사카 새 배포 주소로 바꿈
-var APP_VER = 'OS-15';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
+var APP_VER = 'OS-16';   // 화면을 고칠 때마다 올림 (정보 탭에 보임 → 폰이 새 화면인지 확인용)
 var IN_GAS =!!(window.google && google.script && google.script.run);   // 앱스 스크립트 화면 또는 내 PC 미리보기
 
 /* 두 번 저장 막기: 단추를 누른 그 순간 서버 요청이 나가면, 답이 올 때까지 그 단추를 잠금('저장 중…') */
@@ -4652,7 +4653,7 @@ function viewSettle(c) {
   // 2026-11-25 사용자 A안: 위 '💡 먼저 갚기'를 할 수 있으면 송금 목록을 접어 둠 (공금으로 갚으면 송금이 없어지므로)
   var canRepay = S.me.isAdmin && c.transfers.length && repayList().total > 0;
   if (canRepay) html += '<div class="tr-fold"><p class="small" style="margin:6px 0 8px;color:var(--warn)">💡 위에서 <b>남은 공금으로 먼저 갚으면</b> 회원끼리 보낼 돈이 없어져요. 공금으로 안 갚을 때만 아래 목록대로 보내면 돼요.</p>' +
-    '<button class="btn sm" data-act="tr-fold">' + (S.trOpen ? '▲ 송금 목록 접기' : '▼ 송금 목록 펼쳐 보기 (' + c.transfers.length + '건)') + '</button></div>' +
+    '<button class="btn fold-btn" data-act="tr-fold">' + (S.trOpen ? '▲ 송금 목록 접기' : '▼ 송금 목록 펼쳐 보기 (' + c.transfers.length + '건)') + '</button></div>' +
     '<div' + (S.trOpen ? '' : ' style="display:none"') + '>';
   c.transfers.forEach(function (t) {
     var k = t.from + '>' + t.to, amt = String(t.krw), sent = settleOn('sent:' + k, '', amt), recv = settleOn('recv:' + k, '', amt);
@@ -4685,7 +4686,7 @@ function viewSettle(c) {
   S.mDet = S.mDet || {};
   html += '<div class="card"><b>👥 회원별</b>';
   if (canRepay) html += '<p class="small" style="margin:6px 0 8px;color:var(--warn)">💡 공금으로 먼저 갚으면 모두 0원이 돼요. 아래는 먼저 갚기 전 금액이에요.</p>' +
-    '<button class="btn sm" data-act="m-fold">' + (S.mOpen ? '▲ 회원별 접기' : '▼ 회원별 펼쳐 보기') + '</button>';
+    '<button class="btn fold-btn" data-act="m-fold">' + (S.mOpen ? '▲ 회원별 접기' : '▼ 회원별 펼쳐 보기') + '</button>';
   if (!canRepay || S.mOpen) {
     html += '<p class="small muted" style="margin:6px 0 0">받을·보낼 돈 = <b>내가 낸 공동경비</b> − <b>나눠 낼 몫</b> · 이름을 누르면 계산 내용이 보여요</p>';
     names.forEach(function (n) {
